@@ -2,19 +2,15 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @link       https://rtcamp.com/nginx-helper/
- * @since      2.0.0
- *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin
  */
 
 /**
  * Description of FastCGI_Purger
  *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin
- * @author     rtCamp
  */
 class FastCGI_Purger extends Purger {
 
@@ -57,7 +53,7 @@ class FastCGI_Purger extends Purger {
 
 				$this->delete_cache_file_for( $_url_purge );
 
-				if ( $feed ) {
+				if ( $feed && ! empty( $nginx_helper_admin->options['purge_feeds'] ) ) {
 
 					$feed_url = rtrim( $_url_purge_base, '/' ) . '/feed/';
 					$this->delete_cache_file_for( $feed_url );
@@ -69,6 +65,10 @@ class FastCGI_Purger extends Purger {
 
 			case 'get_request':
 				// Go to default case.
+
+			case 'get_request_torden':
+				// Go to default case.
+
 			default:
 				$_url_purge_base = $this->purge_base_url() . $parse['path'];
 				$_url_purge      = $_url_purge_base;
@@ -79,7 +79,7 @@ class FastCGI_Purger extends Purger {
 
 				$this->do_remote_get( $_url_purge );
 
-				if ( $feed ) {
+				if ( $feed && ! empty( $nginx_helper_admin->options['purge_feeds'] ) ) {
 
 					$feed_url = rtrim( $_url_purge_base, '/' ) . '/feed/';
 					$this->do_remote_get( $feed_url );
@@ -90,7 +90,30 @@ class FastCGI_Purger extends Purger {
 				break;
 
 		}
+		
+		if( ( is_page() || is_single() ) && $nginx_helper_admin->options['purge_amp_urls'] ) {
+			$this->purge_amp_version( $url );
+		}
 
+	}
+	
+	/**
+	 * Purge AMP version of a URL.
+	 *
+	 * @param string $url_base The base URL to purge.
+	 */
+	private function purge_amp_version( $url_base ) {
+		global $nginx_helper_admin;
+
+		$amp_url = sprintf( '%s/amp/', rtrim( $url_base, '/' ) );
+		
+		$this->log( '- Purging AMP URL | ' . $amp_url );
+		
+		if ( 'unlink_files' === $nginx_helper_admin->options['purge_method'] ) {
+			$this->delete_cache_file_for( $amp_url );
+		} else {
+			$this->do_remote_get( $amp_url );
+		}
 	}
 
 	/**
@@ -137,6 +160,10 @@ class FastCGI_Purger extends Purger {
 
 			case 'get_request':
 				// Go to default case.
+
+			case 'get_request_torden':
+				// Go to default case.
+
 			default:
 				$_url_purge_base = $this->purge_base_url();
 
@@ -166,9 +193,55 @@ class FastCGI_Purger extends Purger {
 	 */
 	public function purge_all() {
 
-		$this->unlink_recursive( RT_WP_NGINX_HELPER_CACHE_PATH, false );
+		global $nginx_helper_admin;
+
+		$purge_method = $nginx_helper_admin->options['purge_method'];
+
+		switch ( $purge_method ) {
+
+			case 'get_request_torden':
+				$site = get_site_url();
+				/** @noinspection PhpLanguageLevelInspection */
+				// Torden GET is guarded to detect 5.5+ in admin page and inform of incompatibility
+				$find    = [ 'http://', 'https://' ];
+				$replace = '';
+				$host    = str_replace( $find, $replace, $site);
+
+				if ( is_ssl() ) {
+					$purgeurl = $site . '/purgeall' ;
+					$curl = curl_init( $purgeurl );
+					curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PURGE" );
+					curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+					curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+					/** @noinspection PhpElementIsNotAvailableInCurrentPhpVersionInspection */
+					// Torden GET is guarded to detect 5.5+ in admin page and inform of incompatibility
+					curl_setopt($curl, CURLOPT_RESOLVE, array($host . ":443:127.0.0.1" ));
+				} else {
+					$curl = curl_init( "http://127.0.0.1/purgeall" );
+					curl_setopt($curl, CURLOPT_HTTPHEADER, array('Host:' . $host ));
+					curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PURGE" );
+					curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
+				}
+
+				$response = curl_exec($curl);
+				if ($response === false)
+					$this->log( curl_errno($curl) .': '. curl_error($curl) );
+				curl_close($curl);
+				break;
+
+			case 'get_request':
+				// Go to default case.
+
+			default:
+				$this->unlink_recursive( RT_WP_NGINX_HELPER_CACHE_PATH, false );
+				break;
+		}
+
+
 		$this->log( '* * * * *' );
 		$this->log( '* Purged Everything!' );
+		$this->log( '* Using: ' . $purge_method );
+		$this->log( '* Filter: ' . current_filter() );
 		$this->log( '* * * * *' );
 
 		/**

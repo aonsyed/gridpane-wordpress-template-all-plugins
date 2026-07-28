@@ -2,10 +2,7 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @link       https://rtcamp.com/nginx-helper/
- * @since      2.0.0
- *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin
  */
 
@@ -15,9 +12,8 @@
  * Defines the plugin name, version, and two examples hooks for how to
  * enqueue the admin-specific stylesheet and JavaScript.
  *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin
- * @author     rtCamp
  */
 class Nginx_Helper_Admin {
 
@@ -53,7 +49,7 @@ class Nginx_Helper_Admin {
 	 *
 	 * @since    2.0.0
 	 * @access   public
-	 * @var      string    $options    Purge options.
+	 * @var      string[]    $options    Purge options.
 	 */
 	public $options;
 
@@ -74,9 +70,18 @@ class Nginx_Helper_Admin {
 	 * @param      string $version    The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
+	    $this->plugin_name = $plugin_name;
+	    $this->version     = $version;
 
-		$this->plugin_name = $plugin_name;
-		$this->version     = $version;
+	    // Initialize options early.
+	    $this->options = $this->nginx_helper_settings();
+	}
+
+	/**
+	 * Initialize the settings tab.
+	 * Required since i18n is used in the settings tab which can be invoked only after init hook since WordPress 6.7
+	 */
+	public function initialize_setting_tab() {
 
 		/**
 		 * Define settings tabs
@@ -94,10 +99,8 @@ class Nginx_Helper_Admin {
 				),
 			)
 		);
-
-		$this->options = $this->nginx_helper_settings();
-
 	}
+
 
 	/**
 	 * Register the stylesheets for the admin area.
@@ -157,7 +160,7 @@ class Nginx_Helper_Admin {
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/nginx-helper-admin.js', array( 'jquery' ), $this->version, false );
 
 		$do_localize = array(
-			'purge_confirm_string' => esc_html__( 'Purging entire cache is not recommended. Would you like to continue?', 'nginx-helper' ),
+			'purge_confirm_string' => esc_html__( 'Purging entire cache is not recommended. Would you like to continue?', 'gridpane-nginx-helper' ),
 		);
 		wp_localize_script( $this->plugin_name, 'nginx_helper', $do_localize );
 
@@ -174,8 +177,8 @@ class Nginx_Helper_Admin {
 
 			add_submenu_page(
 				'settings.php',
-				__( 'Nginx Helper', 'nginx-helper' ),
-				__( 'Nginx Helper', 'nginx-helper' ),
+				__( 'Nginx Helper', 'gridpane-nginx-helper' ),
+				__( 'Nginx Helper', 'gridpane-nginx-helper' ),
 				'manage_options',
 				'nginx',
 				array( &$this, 'nginx_helper_setting_page' )
@@ -185,8 +188,8 @@ class Nginx_Helper_Admin {
 
 			add_submenu_page(
 				'options-general.php',
-				__( 'Nginx Helper', 'nginx-helper' ),
-				__( 'Nginx Helper', 'nginx-helper' ),
+				__( 'Nginx Helper', 'gridpane-nginx-helper' ),
+				__( 'Nginx Helper', 'gridpane-nginx-helper' ),
 				'manage_options',
 				'nginx',
 				array( &$this, 'nginx_helper_setting_page' )
@@ -203,16 +206,16 @@ class Nginx_Helper_Admin {
 	 */
 	public function nginx_helper_toolbar_purge_link( $wp_admin_bar ) {
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'Nginx Helper | Purge cache' ) ) {
 			return;
 		}
 
 		if ( is_admin() ) {
 			$nginx_helper_urls = 'all';
-			$link_title        = __( 'Purge Cache', 'nginx-helper' );
+			$link_title        = __( 'Purge Cache', 'gridpane-nginx-helper' );
 		} else {
 			$nginx_helper_urls = 'current-url';
-			$link_title        = __( 'Purge Current Page', 'nginx-helper' );
+			$link_title        = __( 'Purge Current Page', 'gridpane-nginx-helper' );
 		}
 
 		$purge_url = add_query_arg(
@@ -255,31 +258,75 @@ class Nginx_Helper_Admin {
 	public function nginx_helper_default_settings() {
 
 		return array(
-			'enable_purge'                     => 0,
-			'cache_method'                     => 'enable_fastcgi',
-			'purge_method'                     => 'get_request',
-			'enable_map'                       => 0,
-			'enable_log'                       => 0,
-			'log_level'                        => 'INFO',
-			'log_filesize'                     => '5',
-			'enable_stamp'                     => 0,
-			'purge_homepage_on_edit'           => 1,
-			'purge_homepage_on_del'            => 1,
-			'purge_archive_on_edit'            => 1,
-			'purge_archive_on_del'             => 1,
-			'purge_archive_on_new_comment'     => 0,
-			'purge_archive_on_deleted_comment' => 0,
-			'purge_page_on_mod'                => 1,
-			'purge_page_on_new_comment'        => 1,
-			'purge_page_on_deleted_comment'    => 1,
-			'redis_hostname'                   => '127.0.0.1',
-			'redis_port'                       => '6379',
-			'redis_prefix'                     => 'nginx-cache:',
-			'purge_url'                        => '',
-			'redis_enabled_by_constant'        => 0,
+			'enable_purge'                          => 0,
+			'cache_method'                          => 'enable_fastcgi',
+			'purge_method'                          => 'get_request',
+			'enable_map'                            => 0,
+			'enable_log'                            => 0,
+			'log_level'                             => 'INFO',
+			'log_filesize'                          => '5',
+			'enable_stamp'                          => 0,
+			'purge_homepage_on_edit'                => 1,
+			'purge_homepage_on_del'                 => 1,
+			'purge_archive_on_edit'                 => 1,
+			'purge_archive_on_del'                  => 1,
+			'purge_archive_on_new_comment'          => 0,
+			'purge_archive_on_deleted_comment'      => 0,
+			'purge_page_on_mod'                     => 1,
+			'purge_page_on_new_comment'             => 1,
+			'purge_page_on_deleted_comment'         => 1,
+			'purge_feeds'                           => 1,
+			'redis_hostname'                        => '127.0.0.1',
+			'redis_port'                            => '6379',
+			'redis_prefix'                          => 'nginx-cache:',
+			'redis_unix_socket'                     => '',
+			'redis_username'                        => '',
+			'redis_password'                        => '',
+			'redis_database'                        => 0,
+			'purge_url'                             => '',
+			'auth_enabled_by_constant'              => 0,
+			'cache_method_set_by_constant'          => 0,
+			'purge_method_set_by_constant'          => 0,
+			'redis_hostname_set_by_constant'        => 0,
+			'redis_port_set_by_constant'            => 0,
+			'redis_unix_socket_set_by_constant'     => 0,
+			'redis_prefix_set_by_constant'          => 0,
+			'redis_database_set_by_constant'        => 0,
+			'redis_username_set_by_constant'        => 0,
+			'redis_password_socket_set_by_constant' => 0,
+			'homepage_purge_post_type_exceptions'   => array(),
+			'preload_cache'                         => 0,
+			'is_cache_preloaded'                    => 0,
+			'purge_amp_urls'                        => 1,
+			'purge_on_update'                       => 0,
+			'purge_on_plugin_activation'           => 0,
+			'purge_on_plugin_deactivation'         => 0,
+			'purge_on_theme_change'                 => 1,
 		);
 
 	}
+
+    public function store_default_options() {
+        $options = get_site_option( 'rt_wp_nginx_helper_options', array() );
+        $default_settings = $this->nginx_helper_default_settings();
+
+        $removable_default_settings = array(
+            'redis_port',
+            'redis_prefix',
+            'redis_hostname',
+            'redis_database',
+            'redis_unix_socket'
+        );
+
+        // Remove all the keys that are not to be stored by default.
+        foreach ( $removable_default_settings as $removable_key ) {
+            unset( $default_settings[ $removable_key ] );
+        }
+
+        $diffed_options = wp_parse_args( $options, $default_settings );
+
+        add_site_option( 'rt_wp_nginx_helper_options', $diffed_options );
+    }
 
 	/**
 	 * Get settings.
@@ -294,6 +341,7 @@ class Nginx_Helper_Admin {
 				'redis_hostname' => '127.0.0.1',
 				'redis_port'     => '6379',
 				'redis_prefix'   => 'nginx-cache:',
+				'redis_database' => 0,
 			)
 		);
 
@@ -302,22 +350,83 @@ class Nginx_Helper_Admin {
 			$this->nginx_helper_default_settings()
 		);
 
-		$is_redis_enabled = (
-			defined( 'RT_WP_NGINX_HELPER_REDIS_HOSTNAME' ) &&
-			defined( 'RT_WP_NGINX_HELPER_REDIS_PORT' ) &&
-			defined( 'RT_WP_NGINX_HELPER_REDIS_PREFIX' )
-		);
+		if ( defined( 'RT_WP_NGINX_HELPER_HOMEPAGE_PURGE_EXCEPTIONS' ) ) {
+			$data['homepage_purge_post_type_exceptions'] = RT_WP_NGINX_HELPER_HOMEPAGE_PURGE_EXCEPTIONS;
+        }
 
-		if ( ! $is_redis_enabled ) {
-			return $data;
+		if ( defined( 'RT_WP_NGINX_HELPER_PURGE_METHOD' ) ) {
+			$data['purge_method']                        = RT_WP_NGINX_HELPER_PURGE_METHOD;
+			$data['purge_method_set_by_constant']        = 1;
 		}
 
-		$data['redis_enabled_by_constant'] = $is_redis_enabled;
-		$data['enable_purge']              = $is_redis_enabled;
-		$data['cache_method']              = 'enable_redis';
-		$data['redis_hostname']            = RT_WP_NGINX_HELPER_REDIS_HOSTNAME;
-		$data['redis_port']                = RT_WP_NGINX_HELPER_REDIS_PORT;
-		$data['redis_prefix']              = RT_WP_NGINX_HELPER_REDIS_PREFIX;
+		if ( defined( 'RT_WP_NGINX_HELPER_CACHE_METHOD' ) ) {
+			$data['cache_method']                       = RT_WP_NGINX_HELPER_CACHE_METHOD;
+			$data['cache_method_set_by_constant']       = 1;
+
+			if ( 'enable_fastcgi' === RT_WP_NGINX_HELPER_CACHE_METHOD ) {
+				$data['enable_purge']              = 1;
+ 			    return $data;
+			}
+		}
+
+		$redis_tcp_connection_enabled_by_constants = false;
+		$redis_unix_socket_enabled_by_constants    = false;
+		$redis_prefix                              = false;
+		$redis_hostname                            = false;
+		$redis_port                                = false;
+		$redis_unix_socket                         = false;
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_PREFIX' ) ) {
+			$redis_prefix                         = RT_WP_NGINX_HELPER_REDIS_PREFIX;
+			$data['redis_prefix']                 = $redis_prefix;
+			$data['redis_prefix_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_PORT' ) ) {
+			$redis_port                         = RT_WP_NGINX_HELPER_REDIS_PORT;
+			$data['redis_port']                 = $redis_port;
+			$data['redis_port_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_HOSTNAME' ) ) {
+			$redis_hostname                         = RT_WP_NGINX_HELPER_REDIS_HOSTNAME;
+			$data['redis_hostname']                 = $redis_hostname;
+			$data['redis_hostname_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_UNIX_SOCKET' ) ) {
+			$redis_unix_socket                         = RT_WP_NGINX_HELPER_REDIS_UNIX_SOCKET;
+			$data['redis_unix_socket']                 = $redis_unix_socket;
+			$data['redis_unix_socket_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_DATABASE' ) ) {
+			$data['redis_database']           = RT_WP_NGINX_HELPER_REDIS_DATABASE;
+			$data['redis_database_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_USERNAME' ) ) {
+			$data['redis_username']           = RT_WP_NGINX_HELPER_REDIS_USERNAME;
+			$data['redis_username_set_by_constant'] = 1;
+		}
+
+		if ( defined( 'RT_WP_NGINX_HELPER_REDIS_PASSWORD' ) ) {
+			$data['redis_password']           = RT_WP_NGINX_HELPER_REDIS_PASSWORD;
+			$data['redis_password_set_by_constant'] = 1;
+		}
+
+		if ( $redis_prefix && $redis_hostname && $redis_port ) {
+			$redis_tcp_connection_enabled_by_constants = true;
+		}
+
+		if ( $redis_prefix && $redis_unix_socket ) {
+			$redis_unix_socket_enabled_by_constants = true;
+		}
+
+		if ( $redis_tcp_connection_enabled_by_constants || $redis_unix_socket_enabled_by_constants ) {
+			$data['enable_purge']              = 1;
+			$data['cache_method']              = 'enable_redis';
+		}
 
 		return $data;
 
@@ -338,11 +447,32 @@ class Nginx_Helper_Admin {
 			$setting_page = 'options-general.php';
 		}
 
-		$settings_link = '<a href="' . network_admin_url( $setting_page . '?page=nginx' ) . '">' . __( 'Settings', 'nginx-helper' ) . '</a>';
+		$settings_link = '<a href="' . network_admin_url( $setting_page . '?page=nginx' ) . '">' . __( 'Settings', 'gridpane-nginx-helper' ) . '</a>';
 		array_unshift( $links, $settings_link );
 
 		return $links;
 
+	}
+
+	/**
+	 * Check if the nginx log is enabled.
+	 *
+	 * @since 2.2.4
+	 * @return    boolean
+	 */
+	public function is_nginx_log_enabled() {
+
+		$options = get_site_option( 'rt_wp_nginx_helper_options', array() );
+
+		if ( ! empty( $options['enable_log'] ) && 1 === (int) $options['enable_log'] ) {
+			return true;
+		}
+
+		if ( defined( 'NGINX_HELPER_LOG' ) && true === NGINX_HELPER_LOG ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -370,60 +500,6 @@ class Nginx_Helper_Admin {
 		$log_url = WP_CONTENT_URL . '/uploads/nginx-helper/';
 
 		return apply_filters( 'nginx_asset_url', $log_url );
-
-	}
-
-	/**
-	 * Get latest news.
-	 *
-	 * @since     2.0.0
-	 */
-	public function nginx_helper_get_feeds() {
-
-		// Get RSS Feed(s).
-		require_once ABSPATH . WPINC . '/feed.php';
-
-		$maxitems  = 0;
-		$rss_items = array();
-
-		// Get a SimplePie feed object from the specified feed source.
-		$rss = fetch_feed( 'https://rtcamp.com/blog/feed/' );
-
-		if ( ! is_wp_error( $rss ) ) { // Checks that the object is created correctly.
-
-			// Figure out how many total items there are, but limit it to 5.
-			$maxitems = $rss->get_item_quantity( 5 );
-			// Build an array of all the items, starting with element 0 (first element).
-			$rss_items = $rss->get_items( 0, $maxitems );
-
-		}
-		?>
-		<ul role="list">
-			<?php
-			if ( 0 === $maxitems ) {
-				echo '<li role="listitem">' . esc_html_e( 'No items', 'nginx-helper' ) . '.</li>';
-			} else {
-
-				// Loop through each feed item and display each item as a hyperlink.
-				foreach ( $rss_items as $item ) {
-					?>
-						<li role="listitem">
-							<?php
-								printf(
-									'<a href="%s" title="%s">%s</a>',
-									esc_url( $item->get_permalink() ),
-									esc_attr__( 'Posted ', 'nginx-helper' ) . esc_attr( $item->get_date( 'j F Y | g:i a' ) ),
-									esc_html( $item->get_title() )
-								);
-							?>
-						</li>
-					<?php
-				}
-			}
-			?>
-		</ul>
-		<?php
-		die();
 
 	}
 
@@ -469,10 +545,9 @@ class Nginx_Helper_Admin {
 		}
 
 		$timestamps = "\n<!--" .
-				'Cached using Nginx-Helper on ' . current_time( 'mysql' ) . '. ' .
-				'It took ' . get_num_queries() . ' queries executed in ' . timer_stop() . ' seconds.' .
-				"-->\n" .
-				'<!--Visit http://wordpress.org/extend/plugins/nginx-helper/faq/ for more details-->';
+			'Cached using Nginx-Helper on ' . current_time( 'mysql' ) . '. ' .
+			'It took ' . get_num_queries() . ' queries executed in ' . timer_stop() . ' seconds.' .
+			"-->\n";
 
 		echo wp_kses( $timestamps, array() );
 
@@ -577,7 +652,21 @@ class Nginx_Helper_Admin {
 
 		global $blog_id, $nginx_purger;
 
-		if ( ! $this->options['enable_purge'] ) {
+		$exclude_post_types = apply_filters( 'rt_nginx_helper_exclude_post_types', array( 'nav_menu_item' ) );
+
+		$post_type = $post->post_type;
+
+		if ( in_array( $post_type, $exclude_post_types, true ) ) {
+		    if ( 'nav_menu_item' !== $post_type ) {
+			    $nginx_purger->log('* * * * *');
+			    $nginx_purger->log('* Post Type update - ' . $post_type . ' - purge trigger excluded...');
+			    $nginx_purger->log('* Filter:  -> rt_nginx_helper_exclude_post_types');
+			    $nginx_purger->log('* * * * *');
+		    }
+			return;
+		}
+
+		if ( ! $this->options['enable_purge'] || $this->is_import_request() ) {
 			return;
 		}
 
@@ -593,10 +682,10 @@ class Nginx_Helper_Admin {
 		if (
 			'future' === $new_status && $post && 'future' === $post->post_status &&
 			(
-				( 'post' === $post->post_type || 'page' === $post->post_type ) ||
+				( 'post' === $post_type || 'page' === $post_type ) ||
 				(
 					isset( $this->options['custom_post_types_recognized'] ) &&
-					in_array( $post->post_type, $this->options['custom_post_types_recognized'], true )
+					in_array( $post_type, $this->options['custom_post_types_recognized'], true )
 				)
 			)
 		) {
@@ -671,21 +760,33 @@ class Nginx_Helper_Admin {
 	 */
 	public function purge_all() {
 
+		if ( $this->is_import_request() ) {
+			return;
+		}
+
 		global $nginx_purger, $wp;
 
-		$method = filter_input( INPUT_SERVER, 'REQUEST_METHOD', FILTER_SANITIZE_STRING );
+		$method = null;
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) ) {
+			$method = wp_strip_all_tags( $_SERVER['REQUEST_METHOD'] );
+		}
 
+		$action = '';
 		if ( 'POST' === $method ) {
-			$action = filter_input( INPUT_POST, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+			if ( isset( $_POST['nginx_helper_action'] ) ) {
+				$action = wp_strip_all_tags( $_POST['nginx_helper_action'] );
+			}
 		} else {
-			$action = filter_input( INPUT_GET, 'nginx_helper_action', FILTER_SANITIZE_STRING );
+			if ( isset( $_GET['nginx_helper_action'] ) ) {
+				$action = wp_strip_all_tags( $_GET['nginx_helper_action'] );
+			}
 		}
 
 		if ( empty( $action ) ) {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'Nginx Helper | Purge cache' ) ) {
 			wp_die( 'Sorry, you do not have the necessary privileges to edit these options.' );
 		}
 
@@ -718,13 +819,13 @@ class Nginx_Helper_Admin {
 		}
 
 		if ( 'purge' === $action ) {
-	
-		    /**
-		     * Fire an action after the entire cache has been purged whatever caching type is used.
-		     * 
-		     * @since 2.2.2
-		     */
-		    do_action( 'rt_nginx_helper_after_purge_all' );
+
+			/**
+			 * Fire an action after the entire cache has been purged whatever caching type is used.
+			 *
+			 * @since 2.2.2
+			 */
+			do_action( 'rt_nginx_helper_after_purge_all' );
 
 		}
 
@@ -737,7 +838,116 @@ class Nginx_Helper_Admin {
 	 * Dispay plugin notices.
 	 */
 	public function display_notices() {
-		echo '<div class="updated"><p>' . esc_html__( 'Purge initiated', 'nginx-helper' ) . '</p></div>';
+		echo '<div class="updated"><p>' . esc_html__( 'Purge initiated', 'gridpane-nginx-helper' ) . '</p></div>';
 	}
 
+	/**
+	 * Preloads the cache for the website.
+	 *
+	 * @return void
+	 */
+	public function preload_cache() {
+		$is_cache_preloaded    = $this->options['is_cache_preloaded'];
+		$preload_cache_enabled = $this->options['preload_cache'];
+
+		if ( $preload_cache_enabled && false === boolval( $is_cache_preloaded ) ) {
+			$this->options['is_cache_preloaded'] = true;
+
+			update_site_option( 'rt_wp_nginx_helper_options', $this->options );
+			$this->preload_cache_from_sitemap();
+		}
+	}
+
+	/**
+	 * This function preloads the cache from sitemap url.
+	 *
+	 * @return void
+	 */
+	private function preload_cache_from_sitemap() {
+
+		$sitemap_urls = $this->get_index_sitemap_urls();
+		$all_urls     = array();
+
+		foreach ( $sitemap_urls as $sitemap_url ) {
+			$urls     = $this->extract_sitemap_urls( $sitemap_url );
+			$all_urls = array_merge( $all_urls, $urls );
+		}
+
+		$args = array(
+			'timeout'   => 1,
+			'blocking'  => false,
+			'sslverify' => false,
+		);
+
+		foreach ( $all_urls as $url ) {
+			wp_remote_get( esc_url_raw( $url ), $args );
+		}
+
+	}
+
+	/**
+	 * Fetches all the sitemap urls for the site.
+	 *
+	 * @return array
+	 */
+	private function get_index_sitemap_urls() {
+		$sitemaps = wp_sitemaps_get_server()->index->get_sitemap_list();
+		$urls     = array();
+		foreach ( $sitemaps as $sitemap ) {
+			$urls[] = $sitemap['loc'];
+		}
+		return $urls;
+	}
+
+	/**
+	 * Parse sitemap content and extract all URLs.
+	 *
+	 * @param string $sitemap_url The URL of the sitemap.
+	 * @return array|WP_Error An array of URLs or WP_Error on failure.
+	 */
+	private function extract_sitemap_urls( $sitemap_url ) {
+		$response = wp_remote_get( $sitemap_url );
+
+		$urls = array();
+
+		if ( is_wp_error( $response ) ) {
+			return $urls;
+		}
+
+		$sitemap_content = wp_remote_retrieve_body( $response );
+
+		libxml_use_internal_errors( true );
+		$xml = simplexml_load_string( $sitemap_content );
+
+		if ( false === $xml ) {
+			return new WP_Error( 'sitemap_parse_error', esc_html__( 'Failed to parse the sitemap XML', 'gridpane-nginx-helper' ) );
+		}
+		
+		$urls = array();
+		
+		if ( false === $xml ) {
+			return $urls;
+		}
+		
+		foreach ( $xml->url as $url ) {
+			$urls[] = (string) $url->loc;
+		}
+		
+		return $urls;
+	}
+	
+	/**
+	* Determines if the current request is for importing Posts/ WordPress content.
+	*
+	* @return bool True if the request is for importing, false otherwise.
+	*/
+	public function is_import_request() {
+		$import_query_var   = sanitize_text_field( wp_unslash( $_GET['import'] ?? '' ) ); //phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce is already in the admin dashboard.
+		$has_import_started = did_action( 'import_start' );
+		
+		return ( defined( 'WP_IMPORTING' ) && true === WP_IMPORTING )
+			|| 0 !== $has_import_started
+			|| ! empty( $import_query_var );
+	}
+	
 }
