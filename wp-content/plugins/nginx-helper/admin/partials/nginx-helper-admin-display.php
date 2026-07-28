@@ -4,10 +4,8 @@
  *
  * This file is used to markup the admin-facing aspects of the plugin.
  *
- * @link       http://example.com
- * @since      2.0.0
  *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin/partials
  */
 
@@ -18,14 +16,14 @@ global $pagenow;
 
 <div class="wrap rt-nginx-wrapper">
 	<h2 class="rt_option_title">
-		<?php esc_html_e( 'Nginx Settings', 'nginx-helper' ); ?>
+		<?php esc_html_e( 'GridPane Nginx Helper Settings', 'gridpane-nginx-helper' ); ?>
 	</h2>
 	<div id="poststuff">
 		<div id="post-body" class="metabox-holder columns-2">
 			<div id="post-body-content">
 				<?php
 				/* Show settinhs tabs */
-				$current_tab         = filter_input( INPUT_GET, 'tab', FILTER_SANITIZE_STRING );
+				$current_tab         = ( isset( $_GET['tab'] ) ? wp_strip_all_tags( $_GET['tab'] ) : '' );
 				$current_setting_tab = ( ! empty( $current_tab ) ) ? $current_tab : 'general';
 
 				echo '<h2 class="nav-tab-wrapper">';

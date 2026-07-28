@@ -2,15 +2,14 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  */
 
 /**
  * Description of Predis_Purger
  *
- * @package    nginx-helper
+ * @package    gridpane-nginx-helper
  * @subpackage nginx-helper/admin
- * @author     rtCamp
  */
 class Predis_Purger extends Purger {
 
@@ -38,19 +37,40 @@ class Predis_Purger extends Purger {
 
 		Predis\Autoloader::register();
 
+		/*Composer sets default to version that doesn't allow modern php*/
+		$predis_connection_array = array();
+
+		$path                                =  $nginx_helper_admin->options['redis_unix_socket'];
+		$username                            =  $nginx_helper_admin->options['redis_username'];
+		$password                            =  $nginx_helper_admin->options['redis_password'];
+		$predis_connection_array['database'] = $nginx_helper_admin->options['redis_database'];
+
+		if ( $path ) {
+			$predis_connection_array['path'] = $path;
+		} else {
+			$predis_connection_array['host'] = $nginx_helper_admin->options['redis_hostname'];;
+			$predis_connection_array['port'] = $nginx_helper_admin->options['redis_port'];
+		}
+
+		if ( $username && $password ) {
+			$predis_connection_array['username'] = $username;
+			$predis_connection_array['password'] = $password;
+		}
+
 		// redis server parameter.
-		$this->redis_object = new Predis\Client(
-			array(
-				'host' => $nginx_helper_admin->options['redis_hostname'],
-				'port' => $nginx_helper_admin->options['redis_port'],
-			)
-		);
+		$this->redis_object = new Predis\Client( $predis_connection_array );
 
 		try {
 			$this->redis_object->connect();
+			
+			if( 0 !== $nginx_helper_admin->options['redis_database'] ) {
+				$this->redis_object->select( $nginx_helper_admin->options['redis_database'] );
+			}
 		} catch ( Exception $e ) {
 			$this->log( $e->getMessage(), 'ERROR' );
+			return;
 		}
+		
 
 	}
 
